@@ -14,7 +14,7 @@
 4. [Папка данных и демо-стенд](#4-папка-данных-и-демо-стенд)
 5. [Как задача проходит путь](#5-как-задача-проходит-путь)
 6. [Контракт](#6-контракт)
-7. [Команды для экранов панели](#7-команды-для-экранов-панели)
+7. [Что умеет ядро](#7-что-умеет-ядро)
 8. [Подводные камни](#8-подводные-камни)
 9. [Чего пока нет в ядре](#9-чего-пока-нет-в-ядре)
 10. [Где смотреть дальше](#10-где-смотреть-дальше)
@@ -61,26 +61,20 @@ Gentry — один исполняемый файл на Go: `gentry`. Им по
 
 ## 2. Что изменилось по сравнению с agents-kit-web
 
-Главное отличие: у ядра появился интерфейс. Прежняя панель читала и писала файлы кита, вызывала его скрипты через `pwsh` и сама запускала `claude`. Новая панель работает только через команды `gentry … --json` и журнал событий; данных Gentry она не касается.
+Главное отличие — откуда панель берёт данные. Бэкенд agents-kit-web сам разбирал файлы баз и памяти задач, сам записывал ответы и правки флоу и сам запускал Claude Code. В Gentry всем этим занимается ядро, а панель только вызывает команды `gentry` и показывает их результат. Поэтому то, чего в ядре ещё нет, панель пока показать не может. Внешний вид прежней панели сохраняется.
 
-| В agents-kit-web | В Gentry | Как панель получает |
-| --- | --- | --- |
-| база знаний, `agents-kit.json` | знание проекта | `gentry project list` |
-| `local/me.json`, копии машины | пул рабочих копий | `gentry worktree list` |
-| память задачи `work/<машина>/<слаг>.md` | задача в `state.db` | `gentry task show`, `gentry stage show` |
-| разделы «## Оператору», «ответ:» | решения оператора | `gentry task show --statement`; запись — `gentry operator record` |
-| `flow/scenarios.md`, `flow/stages/*.md` | флоу в папке процесса: YAML и Markdown | `gentry flow show`, `flow diff`, `flow apply` |
-| исполнители `agents/` | субагенты флоу и библиотеки | `gentry flow show`, `library apply` |
-| `worktree-add.ps1` | `gentry worktree add` | та же команда |
-| `claude --bg` + навык кита | драйвер сессий | `task run`, `task stop` — после [#37](https://github.com/t8nax/gentry/issues/37) |
-| `backlog.md`, `tracker.md` | встроенный бэклог и трекеры | после [#14](https://github.com/t8nax/gentry/issues/14)–[#23](https://github.com/t8nax/gentry/issues/23) |
-| опрос `/api/workspaces` раз в 3 с | журнал событий | `gentry events --after`; ожидание новых — после [#50](https://github.com/t8nax/gentry/issues/50) |
-| прямая запись файлов и `git commit` | только команды ядра | нет команды — задача в `t8nax/gentry` |
-| `base-check`, `link-state` | проверка установки | `gentry doctor` — после [#33](https://github.com/t8nax/gentry/issues/33) |
-| Чудо-Юдо через `claude -p` | не переносится: панель не запускает `claude` | ИИ-помощник в формах — открытый вопрос |
-| «Расход» | не переносится | — |
+### Слова
 
-Что переносится почти без изменений: оформление (токены, темы, шапка, полоса разделов, модальные окна, скелетоны), таблица копий с бейджами состояний, окно ответа оператору, отрисовка схемы флоу. Данные для них теперь приходят из контракта.
+| В agents-kit-web | В Gentry |
+| --- | --- |
+| база | проект; общие сведения о нём — знание проекта |
+| копия | рабочая копия; все копии проекта — пул |
+| память задачи | задача: её путь по этапам, шаги, заметки, решения оператора |
+| ответ оператору | решение оператора |
+| исполнитель | субагент |
+| кит | Gentry, ядро |
+
+Что ядро уже умеет и чего в нём пока нет, перечислено в разделах 7 и 9.
 
 ## 3. Установка и обновление
 
@@ -361,16 +355,18 @@ $ gentry events --after 34
 - Строка на событие, с `--json` и без; `seq` растёт без пропусков. Команды нет в `gentry --help`: она служебная.
 - `--after <seq>` выдаёт события после указанного номера и завершается. Панель хранит последний обработанный `seq` и продолжает с него, в том числе после перезапуска.
 - Ожидания новых событий (`--follow`) пока нет ([#50](https://github.com/t8nax/gentry/issues/50)). До неё журнал нужно опрашивать.
-- Изменение состояния и его событие записываются в одной транзакции. Событие об изменении процесса (флоу, библиотека, синхронизация) записывается после коммита в git и может потеряться, если `state.db` недоступна. Поэтому экран флоу при открытии перечитывает флоу, а не полагается только на события.
+- Изменение состояния и его событие записываются в одной транзакции. Событие об изменении процесса (флоу, библиотека, синхронизация) записывается после коммита в git и может потеряться, если `state.db` недоступна. Поэтому флоу, когда его нужно показать, панель перечитывает командой, а не полагается только на события.
 - Типы событий: `project.added`, `worktree.added`, `task.taken`, `task.closed`, `task.cancelled`, `step.added`, `step.done`, `step.dropped`, `stage.exited`, `stage.skipped`, `note.added`, `operator_decision.recorded`, `artifact.saved`, `flow.applied`, `flow.draft_discarded`, `library.applied`, `library.draft_discarded`, `process.synced`, `process.remote_set`. Данные каждого типа описаны в `contract/schemas/events/`.
 
-## 7. Команды для экранов панели
+## 7. Что умеет ядро
 
-| Экран | Чтение | Действия | События |
+Команды, которые панель может вызывать уже сейчас, по областям.
+
+| Область | Чтение | Действия | События |
 | --- | --- | --- | --- |
-| Шапка | `version` | — | — |
+| Версия | `version` | — | — |
 | Задачи | `task list [--all \| --state …]` | `task cancel <задача>` | `task.*`, `stage.*`, `step.*` |
-| Задача | `task show <задача> [--path] [--statement]`, `stage show --task`, `note list --task`, `task attempts` | `operator record`, `note add`, `task cancel` | события задачи |
+| Задача подробно | `task show <задача> [--path] [--statement]`, `stage show --task`, `note list --task`, `task attempts` | `operator record`, `note add`, `task cancel` | события задачи |
 | Рабочие копии | `worktree list` | `worktree add <путь>`, `agents sync` | `worktree.added`, `task.*` |
 | Проекты | `project list` | `project add` | `project.added` |
 | Флоу | `flow show [--scenario \| --stage \| --agent \| --part] [--draft]` | `flow diff`, `flow apply`, `flow discard` | `flow.*` |
@@ -396,7 +392,7 @@ $ gentry events --after 34
 | --- | --- |
 | Ожидание новых событий: `events --follow` | [#50](https://github.com/t8nax/gentry/issues/50) |
 | Запуск и остановка сессий агента: `task run`, `task stop` | [#37](https://github.com/t8nax/gentry/issues/37), [#38](https://github.com/t8nax/gentry/issues/38) |
-| Вопросы и ответы через Gentry: главный экран панели | [#39](https://github.com/t8nax/gentry/issues/39) |
+| Вопросы и ответы через Gentry | [#39](https://github.com/t8nax/gentry/issues/39) |
 | Личные настройки: `config` | [#32](https://github.com/t8nax/gentry/issues/32) |
 | Бэклог, входящие, трекеры | [#14](https://github.com/t8nax/gentry/issues/14)–[#23](https://github.com/t8nax/gentry/issues/23) |
 | Создание и удаление рабочих копий | [#25](https://github.com/t8nax/gentry/issues/25), [#26](https://github.com/t8nax/gentry/issues/26) |
