@@ -1,18 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppIcon from '@/components/AppIcon/AppIcon.vue'
-import {
-  COLUMN_COUNT,
-  PROBLEMS_STATE_LABELS,
-  isFresh,
-  needsOperator,
-  rowKey,
-  stubMessage,
-  useWorktreesNotify,
-  type FreshCopy,
-  type WorkspaceGroup,
-} from '@/views/worktrees/helper'
-import WorktreesProblemsButton from '@/views/worktrees/components/WorktreesProblemsButton.vue'
+import { COLUMN_COUNT, isFresh, rowKey, type FreshCopy, type WorkspaceGroup } from '@/views/worktrees/helper'
 import WorktreesRow from '@/views/worktrees/components/WorktreesRow.vue'
 
 const props = defineProps<{
@@ -25,24 +14,7 @@ const emit = defineEmits<{
   toggle: []
 }>()
 
-const notify = useWorktreesNotify()
-
-const waiting = computed(() => props.group.rows.some(needsOperator))
-
-// Проблемы базы и почему их нет — один раз в заголовке группы: состояние проверки у копий базы общее
-const baseProblems = computed(() => {
-  const row = props.group.rows.find((candidate) => !candidate.error && candidate.problemsState)
-  const state = row?.problemsState ?? null
-  if (state === null || (state === 'checked' && !row?.baseProblems)) return null
-  if (state !== 'checked') return { label: PROBLEMS_STATE_LABELS[state], count: null }
-  return { label: null, count: row?.baseProblems ?? 0 }
-})
-
 const toggleLabel = computed(() => `${props.collapsed ? 'Развернуть' : 'Свернуть'} ${props.group.project}`)
-
-function openProblems() {
-  notify(stubMessage('Раздел «Проблемы баз» ещё не перенесён'))
-}
 </script>
 
 <template>
@@ -71,19 +43,6 @@ function openProblems() {
             />
           </button>
           <span class="font-semibold">{{ group.project }}</span>
-          <!-- У свёрнутой группы ожидание держит точка -->
-          <span
-            v-if="collapsed && waiting"
-            class="size-1.5 rounded-full bg-kit-waiting-fill"
-            title="Есть копии, ждущие оператора"
-          >
-            <span class="sr-only">есть копии, ждущие оператора</span>
-          </span>
-          <!-- Число проблем ведёт в свой раздел и группу не сворачивает -->
-          <span v-if="baseProblems" class="ml-auto text-xs" @click.stop>
-            <span v-if="baseProblems.label" class="text-kit-tertiary">{{ baseProblems.label }}</span>
-            <WorktreesProblemsButton v-else :count="baseProblems.count ?? 0" owner="базы" @open="openProblems" />
-          </span>
         </div>
       </th>
     </tr>

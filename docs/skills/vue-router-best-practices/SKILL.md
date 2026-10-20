@@ -8,6 +8,8 @@ author: github.com/vuejs-ai
 
 Vue Router best practices, common gotchas, and navigation patterns.
 
+**In this project:** view module routes live in `views/<domain>/<domain>Routes.ts` and are spread into `router/index.ts`; overall module layout (views/layouts/components) — see [frontend-modules](../frontend-modules/SKILL.md).
+
 ### Navigation Guards
 - Navigating between same route with different params → See [router-beforeenter-no-param-trigger](reference/router-beforeenter-no-param-trigger.md)
 - Accessing component instance in beforeRouteEnter guard → See [router-beforerouteenter-no-this](reference/router-beforerouteenter-no-this.md)

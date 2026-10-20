@@ -25,15 +25,15 @@ const GROUPS: SkeletonGroup[] = [
     width: 118,
     rows: [
       { name: 104, branch: 150, task: '72%', stage: 84, badge: 84 },
-      { name: 88, branch: 124, task: '58%', stage: 96, badge: 104 },
+      { name: 88, branch: 124, task: '58%', stage: 96, badge: 72 },
       { name: 96, branch: 138, task: '64%', stage: 70, badge: 72 },
     ],
   },
   {
     width: 86,
     rows: [
-      { name: 70, branch: 110, task: '48%', stage: 84, badge: 84 },
-      { name: 92, branch: 132, task: '66%', stage: 90, badge: 104 },
+      { name: 70, branch: 110, task: '48%', stage: 84, badge: 72 },
+      { name: 92, branch: 132, task: '66%', stage: 90, badge: 72 },
     ],
   },
 ]
@@ -59,10 +59,9 @@ function bar(width: number | string, height: number) {
         <tr v-for="(row, rowIndex) in group.rows" :key="rowIndex">
           <td :class="TABLE_CELL">
             <div class="flex items-center gap-[9px]">
-              <span class="worktrees-skeleton__bar worktrees-skeleton__bar--round" :style="bar(8, 8)" />
               <span class="worktrees-skeleton__bar" :style="bar(row.name, 11)" />
             </div>
-            <div class="ml-[17px] mt-0.5">
+            <div class="mt-0.5">
               <span class="worktrees-skeleton__bar" :style="bar(row.branch, 8)" />
             </div>
           </td>
@@ -84,7 +83,6 @@ function bar(width: number | string, height: number) {
           <td :class="TABLE_CELL">
             <span class="worktrees-skeleton__bar" :style="bar(row.badge, 22)" />
           </td>
-          <td :class="TABLE_CELL" />
           <td :class="TABLE_CELL">
             <div class="flex justify-end">
               <span class="worktrees-skeleton__bar" :style="bar(24, 24)" />
@@ -123,10 +121,6 @@ $wave-width: 60vw;
       animation: none;
       background-image: none;
     }
-  }
-
-  &__bar--round {
-    border-radius: 50%;
   }
 }
 

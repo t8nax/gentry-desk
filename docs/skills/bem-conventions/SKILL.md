@@ -99,3 +99,8 @@ Tailwind classes in `class="..."` stay as utilities; BEM applies to **custom** c
 - [ ] No double `__` chains; reusable children are new blocks
 - [ ] Modifier class paired with base class in HTML
 - [ ] Sass `&__` / `&--` produce correct flat selectors
+
+## Related
+
+- Module folder and file naming (`views` / `layouts` / `components`): [frontend-modules](../frontend-modules/SKILL.md)
+- Sass authoring: [scss-best-practices](../scss-best-practices/SKILL.md)

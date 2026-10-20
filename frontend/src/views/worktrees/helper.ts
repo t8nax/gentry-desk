@@ -1,58 +1,54 @@
 import { inject, onMounted, onUnmounted, provide, ref, shallowRef, watch, type InjectionKey } from 'vue'
 import type { IconName } from '@/components/AppIcon/helper'
 
+/** Занятость копии: свободна или занята незавершённой задачей. Не путать с этапом задачи и сессией агента. */
+export type WorktreeOccupancy = 'free' | 'busy'
+
 /**
- * starting — панель запустила задачу, а памяти у копии ещё нет: агент только начал.
- * unread — оператор ответил, а прочесть ответ некому: ни сессии VS Code, ни фоновой сессии задачи в копии нет.
+ * Текущая задача в копии. Сейчас в строке показывается одна;
+ * массив оставлен, чтобы позже вывести несколько (например задачи без правок кода).
  */
-export type WorkspaceStatus = 'free' | 'starting' | 'in-work' | 'waiting' | 'unread'
-
-/** Состояния сессии агента в копии; отсутствие сессии состоянием не считается. */
-export type SessionState = 'working' | 'waiting' | 'idle'
-
-export type ProblemsState = 'checked' | 'pending' | 'kit-not-set' | 'kit-not-found' | 'failed'
+export interface WorktreeTaskView {
+  /** Идентификатор Gentry, например GENTRYDESK-1. */
+  id: string
+  title: string
+  /** Название этапа, например «Реализация». */
+  stage: string | null
+  /** Номер круга этапа; null — круг не показывают. */
+  round: number | null
+  /** Процент прогресса 0–100; из ядра считается отдельно. */
+  progress: number | null
+}
 
 export interface WorkspaceRow {
   project: string
-  base: string
+  /** Путь к знанию проекта — ключ группы. */
+  knowledge: string
   path: string
   branch: string | null
-  task: string | null
-  flowStep: string | null
-  progress: number | null
-  status: WorkspaceStatus | null
-  error: string | null
-  /** Проблемы связи самой копии с базой, когда problemsState — checked. */
-  problems?: number | null
-  /** Находки сверки базы — общие для всех её копий. */
-  baseProblems?: number | null
-  problemsState?: ProblemsState | null
-  /** Стоит у основной копии проекта: каталог, куда кит кладёт новые копии. */
-  copiesDir?: string | null
-  sessionState?: SessionState | null
-  backgroundSession?: boolean
-  vsCodeSession?: boolean
-  /** Буквы номеров проекта: по ним номер задачи отделяется от заголовка. */
-  letters?: string | null
+  /** Основная копия проекта. */
+  main: boolean
+  /** Каталог копии есть на диске. */
+  exists: boolean
+  occupancy: WorktreeOccupancy
+  tasks: WorktreeTaskView[]
 }
 
 export interface WorkspaceGroup {
-  base: string
+  knowledge: string
   project: string
   rows: WorkspaceRow[]
 }
 
-/** Только что заведённая копия: её строка отмечена, пока висит уведомление. */
+/** Только что подключённая копия: её строка отмечена, пока висит уведомление. */
 export interface FreshCopy {
-  base: string
-  name: string | null
+  knowledge: string
+  path: string
 }
 
-export type KitState = 'not-set' | 'not-found'
+export const COLUMN_COUNT = 7
 
-export const COLUMN_COUNT = 8
-
-export const WORKTREES_COLUMNS = ['Копия', '№', 'Задача', 'Этап', 'Прогресс', 'Статус', 'Проблемы', 'Действия'] as const
+export const WORKTREES_COLUMNS = ['Копия', '№', 'Задача', 'Этап', 'Прогресс', 'Статус', 'Действия'] as const
 
 /** Сколько длится чтение моковых копий. */
 export const MOCK_LOAD_MS = 600
@@ -63,51 +59,22 @@ export const SKELETON_DELAY_MS = 300
 /** Сколько висит уведомление внизу справа. */
 export const TOAST_MS = 5000
 
-/** Сколько строка заведённой копии остаётся отмеченной. */
+/** Сколько строка подключённой копии остаётся отмеченной. */
 export const FRESH_MS = 8000
 
 export const TABLE_HEAD_CELL =
-  'whitespace-nowrap border-b border-kit-subtle px-4 py-2.5 text-left text-xs font-normal uppercase tracking-[0.05em] text-kit-secondary'
+  'whitespace-nowrap border-b border-kit-subtle px-4 py-2.5 text-left text-xs font-normal text-kit-secondary'
 
 /** Ячейка строки без white-space: колонка задачи переносится, остальные — нет. */
 export const TABLE_CELL = 'border-b border-kit-subtle px-4 py-2.5 align-middle'
 
-export const STATUS_LABELS: Record<WorkspaceStatus, string> = {
+export const OCCUPANCY_LABELS: Record<WorktreeOccupancy, string> = {
   free: 'Свободна',
-  starting: 'Запускается',
-  'in-work': 'В работе',
-  waiting: 'Ждёт оператора',
-  unread: 'Ответ не прочитан',
-}
-
-export const SESSION_LABELS: Record<SessionState, string> = {
-  working: 'сессия работает',
-  waiting: 'сессия ждёт вас в терминале',
-  idle: 'сессия стоит без дела',
-}
-
-export const NO_SESSION_LABEL = 'сессии нет'
-
-export const PROBLEMS_STATE_LABELS: Record<Exclude<ProblemsState, 'checked'>, string> = {
-  pending: 'проверяется',
-  'kit-not-set': 'кит не задан',
-  'kit-not-found': 'кит не найден',
-  failed: 'сверка не выполнена',
-}
-
-/** Без оператора работа в копии стоит: ждёт его ответа или сессии, которая прочтёт ответ. */
-export function needsOperator(row: WorkspaceRow): boolean {
-  return row.status === 'waiting' || row.status === 'unread'
-}
-
-/** Задача в копии идёт, а ответ оператора прочесть и работу продолжить некому. */
-export function needsTaskSession(row: WorkspaceRow): boolean {
-  const inWork = row.status === 'in-work' || row.status === 'waiting' || row.status === 'unread'
-  return inWork && !row.backgroundSession && !row.vsCodeSession
+  busy: 'Занята',
 }
 
 export function rowKey(row: WorkspaceRow): string {
-  return `${row.base}|${row.path}`
+  return `${row.knowledge}|${row.path}`
 }
 
 /** Имя копии — последний каталог её пути. */
@@ -115,28 +82,30 @@ export function copyName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
-/** Группа — база копий; группы и копии в них идут в порядке, в каком пришли строки. */
-export function groupByBase(rows: WorkspaceRow[]): WorkspaceGroup[] {
+/** Текущая задача строки; при нескольких задачах пока берётся первая. */
+export function currentTask(row: WorkspaceRow): WorktreeTaskView | null {
+  return row.tasks[0] ?? null
+}
+
+/** Подпись этапа с кругом: «Реализация, круг 2». */
+export function stageLabel(task: WorktreeTaskView): string | null {
+  if (!task.stage) return null
+  return task.round != null ? `${task.stage}, круг ${task.round}` : task.stage
+}
+
+/** Группа — проект по пути знания; группы и копии в них идут в порядке строк. */
+export function groupByKnowledge(rows: WorkspaceRow[]): WorkspaceGroup[] {
   const groups = new Map<string, WorkspaceGroup>()
   for (const row of rows) {
-    const group = groups.get(row.base)
+    const group = groups.get(row.knowledge)
     if (group) group.rows.push(row)
-    else groups.set(row.base, { base: row.base, project: row.project, rows: [row] })
+    else groups.set(row.knowledge, { knowledge: row.knowledge, project: row.project, rows: [row] })
   }
   return [...groups.values()]
 }
 
 export function isFresh(row: WorkspaceRow, fresh: FreshCopy | null): boolean {
-  return fresh?.name != null && row.base === fresh.base && row.branch === fresh.name
-}
-
-/** Без кита числа проблем нет ни у одной строки: причина — одной плашкой над таблицей. */
-export function kitStateOf(rows: WorkspaceRow[]): KitState | null {
-  const state = rows.find((row) => row.problemsState === 'kit-not-set' || row.problemsState === 'kit-not-found')
-    ?.problemsState
-  if (state === 'kit-not-set') return 'not-set'
-  if (state === 'kit-not-found') return 'not-found'
-  return null
+  return fresh != null && row.knowledge === fresh.knowledge && row.path === fresh.path
 }
 
 /** Число и существительное: 1 ошибка, 2 ошибки, 5 ошибок. */
@@ -148,166 +117,112 @@ export function plural(count: number, one: string, few: string, many: string): s
   return `${count} ${many}`
 }
 
-// Номер записи бэклога: буквы проекта и число, «ORD-12». Кириллические двойники латинских букв
-// в номере, набранном руками, ничего не значат: «в-7» — тот же номер, что «B-7».
-const NUMBER_FORMAT = /^([A-Z][A-Z0-9]{0,9})-\d+$/
+const GENTRY_DESK_KNOWLEDGE = 'C:\\projects\\ai\\gentry-desk-knowledge'
+const SHOP_KNOWLEDGE = 'D:\\Projects\\shop-knowledge'
 
-const LATIN_TWINS: Record<string, string> = {
-  А: 'A', В: 'B', Е: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', Х: 'X',
-}
-
-const NUMBERED_TASK = /^(\S+)\s+(.+)$/
-
-function normalizeNumber(text: string): string | null {
-  const number = [...text.trim().toUpperCase()].map((c) => LATIN_TWINS[c] ?? c).join('')
-  return NUMBER_FORMAT.test(number) ? number : null
-}
-
-function numberLetters(number: string): string | null {
-  return NUMBER_FORMAT.exec(normalizeNumber(number) ?? '')?.[1] ?? null
-}
-
-/** Номер задачи из бэклога отделяется от заголовка, только если начат буквами проекта. */
-export function splitTask(task: string, letters: string | null | undefined): { number: string | null; title: string } {
-  const match = NUMBERED_TASK.exec(task)
-  const number = match ? normalizeNumber(match[1]) : null
-  return number && match && letters && numberLetters(number) === letters
-    ? { number, title: match[2] }
-    : { number: null, title: task }
-}
-
-const NAME_WORDS = {
-  first: ['brave', 'calm', 'quick', 'quiet', 'bright', 'gentle'],
-  second: ['sunny', 'misty', 'snowy', 'windy', 'starry', 'rainy'],
-  third: ['otter', 'falcon', 'badger', 'heron', 'lynx', 'marten'],
-}
-
-function pick(words: string[]): string {
-  return words[Math.floor(Math.random() * words.length)]
-}
-
-/** Имя, которое кит придумал бы сам, например brave-sunny-otter. */
-export function mockCopyName(): string {
-  return `${pick(NAME_WORDS.first)}-${pick(NAME_WORDS.second)}-${pick(NAME_WORDS.third)}`
-}
-
-const APP_BASE = 'D:\\Projects\\app-knowledge'
-const NOTA_BASE = 'D:\\Projects\\nota-knowledge'
-
-/** Строки из фикстур App.test.tsx agents-kit-web, собранные в одну таблицу. */
+/** Моки: свободная, занятая, основная, круг 2, отсутствующий каталог (свободная и занятая). */
 export const MOCK_WORKSPACE_ROWS: WorkspaceRow[] = [
   {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'D:\\Projects\\app-main',
+    project: 'gentry-desk',
+    knowledge: GENTRY_DESK_KNOWLEDGE,
+    path: 'C:\\projects\\ai\\gentry-desk',
     branch: 'main',
-    task: null,
-    flowStep: null,
-    progress: null,
-    status: 'free',
-    error: null,
-    copiesDir: 'D:\\Projects',
-    problemsState: 'checked',
-    baseProblems: 2,
-    problems: 0,
+    main: true,
+    exists: true,
+    occupancy: 'busy',
+    tasks: [
+      {
+        id: 'GENTRYDESK-1',
+        title: 'Экран рабочих копий под ядро Gentry',
+        stage: 'Реализация',
+        round: 2,
+        progress: 42,
+      },
+    ],
   },
   {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'D:\\Projects\\app',
-    branch: 'feat/table',
-    task: 'B-24 Номер задачи отдельной колонкой',
-    flowStep: 'Реализация',
-    progress: 33,
-    status: 'waiting',
-    error: null,
-    sessionState: 'idle',
-    backgroundSession: true,
-    letters: 'B',
-    problemsState: 'checked',
-    baseProblems: 2,
-    problems: 0,
+    project: 'gentry-desk',
+    knowledge: GENTRY_DESK_KNOWLEDGE,
+    path: 'C:\\projects\\ai\\gentry-desk-wt',
+    branch: 'feat/connect',
+    main: false,
+    exists: true,
+    occupancy: 'free',
+    tasks: [],
   },
   {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'D:\\Projects\\app-wt',
-    branch: 'dev',
-    task: null,
-    flowStep: null,
-    progress: null,
-    status: 'free',
-    error: null,
-    sessionState: 'working',
-    problemsState: 'checked',
-    baseProblems: 2,
-    problems: 1,
-  },
-  {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'D:\\Projects\\left',
-    branch: 'feat/table-left',
-    task: 'Таблица рабочих копий',
-    flowStep: 'Реализация',
-    progress: 58,
-    status: 'in-work',
-    error: null,
-    sessionState: null,
-    letters: 'B',
-  },
-  {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'D:\\Projects\\app-2',
-    branch: 'feat/unread',
-    task: 'Задача не из бэклога',
-    flowStep: 'Проверка',
-    progress: 80,
-    status: 'unread',
-    error: null,
-    sessionState: null,
-    letters: 'B',
-  },
-  {
-    project: 'app-knowledge',
-    base: APP_BASE,
-    path: 'E:\\gone',
+    project: 'gentry-desk',
+    knowledge: GENTRY_DESK_KNOWLEDGE,
+    path: 'E:\\gone\\gentry-desk-old',
     branch: null,
-    task: null,
-    flowStep: null,
-    progress: null,
-    status: null,
-    error: 'Копия не найдена на диске',
+    main: false,
+    exists: false,
+    occupancy: 'free',
+    tasks: [],
   },
   {
-    project: 'Nota',
-    base: NOTA_BASE,
-    path: 'D:\\Projects\\nota',
+    project: 'gentry-desk',
+    knowledge: GENTRY_DESK_KNOWLEDGE,
+    path: 'E:\\gone\\gentry-desk-feature',
+    branch: 'feat/missing',
+    main: false,
+    exists: false,
+    occupancy: 'busy',
+    tasks: [
+      {
+        id: 'GENTRYDESK-3',
+        title: 'Задача на копии без каталога',
+        stage: 'Реализация',
+        round: 1,
+        progress: 35,
+      },
+    ],
+  },
+  {
+    project: 'shop',
+    knowledge: SHOP_KNOWLEDGE,
+    path: 'D:\\Projects\\shop\\main',
     branch: 'main',
-    task: 'ORD-12 Выгрузка заказов за период',
-    flowStep: 'Ревью',
-    progress: 75,
-    status: 'waiting',
-    error: null,
-    sessionState: 'waiting',
-    vsCodeSession: true,
-    letters: 'ORD',
-    copiesDir: 'D:\\Projects',
+    main: true,
+    exists: true,
+    occupancy: 'busy',
+    tasks: [
+      {
+        id: 'SHOP-1',
+        title: 'Скидка в корзине',
+        stage: 'Реализация',
+        round: 2,
+        progress: 67,
+      },
+    ],
   },
   {
-    project: 'Nota',
-    base: NOTA_BASE,
-    path: 'D:\\Projects\\orders-2',
-    branch: 'fix/utf',
-    task: 'UTF-8 в именах файлов ломает выгрузку',
-    flowStep: null,
-    progress: null,
-    status: 'starting',
-    error: null,
-    sessionState: 'working',
-    backgroundSession: true,
-    letters: 'ORD',
+    project: 'shop',
+    knowledge: SHOP_KNOWLEDGE,
+    path: 'D:\\Projects\\shop\\wt-1',
+    branch: 'feat/pay',
+    main: false,
+    exists: true,
+    occupancy: 'free',
+    tasks: [],
+  },
+  {
+    project: 'shop',
+    knowledge: SHOP_KNOWLEDGE,
+    path: 'D:\\Projects\\shop\\wt-2',
+    branch: 'feat/import',
+    main: false,
+    exists: true,
+    occupancy: 'busy',
+    tasks: [
+      {
+        id: 'SHOP-4',
+        title: 'Фильтр каталога по наличию',
+        stage: 'План',
+        round: 1,
+        progress: 20,
+      },
+    ],
   },
 ]
 
@@ -414,7 +329,10 @@ export function useMockWorkspaceRows() {
       window.clearTimeout(skeletonTimer)
       revealing.value = skeletonShown.value
       skeletonShown.value = false
-      rows.value = MOCK_WORKSPACE_ROWS.map((row) => ({ ...row }))
+      rows.value = MOCK_WORKSPACE_ROWS.map((row) => ({
+        ...row,
+        tasks: row.tasks.map((task) => ({ ...task })),
+      }))
     }, MOCK_LOAD_MS)
   })
 

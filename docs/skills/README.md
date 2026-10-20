@@ -8,6 +8,7 @@ See root [AGENTS.md](../../AGENTS.md) for when to load each skill.
 
 | Skill | Upstream |
 | --- | --- |
+| [frontend-modules](frontend-modules/SKILL.md) | Project rule (module layout for `views` / `layouts` / `components`) |
 | [vue-best-practices](vue-best-practices/SKILL.md) | https://github.com/vuejs-ai/skills |
 | [vue-router-best-practices](vue-router-best-practices/SKILL.md) | https://github.com/vuejs-ai/skills |
 | [vue-pinia-best-practices](vue-pinia-best-practices/SKILL.md) | https://github.com/vuejs-ai/skills |
@@ -15,4 +16,4 @@ See root [AGENTS.md](../../AGENTS.md) for when to load each skill.
 | [scss-best-practices](scss-best-practices/SKILL.md) | https://github.com/Mindrally/skills (Apache-2.0) |
 | [bem-conventions](bem-conventions/SKILL.md) | Project rule (strict BEM for custom SCSS) |
 
-Licenses: MIT for Vue/Router/Pinia/Tailwind upstreams; Apache-2.0 for SCSS skill (see `scss-best-practices/LICENSE`); `bem-conventions` is project-authored.
+Licenses: MIT for Vue/Router/Pinia/Tailwind upstreams; Apache-2.0 for SCSS skill (see `scss-best-practices/LICENSE`); `frontend-modules` and `bem-conventions` are project-authored.

@@ -8,6 +8,8 @@ author: github.com/vuejs-ai
 
 Pinia best practices, common gotchas, and state management patterns.
 
+**In this project:** domain stores belong in the module folder as `<domain>Store.ts` (usually under `views/<domain>/`) — see [frontend-modules](../frontend-modules/SKILL.md). App-wide stores may stay in `src/stores/`.
+
 ### Store Setup
 - Getting "getActivePinia was called" error at startup → See [pinia-no-active-pinia-error](reference/pinia-no-active-pinia-error.md)
 - Setup stores missing state in DevTools or SSR → See [pinia-setup-store-return-all-state](reference/pinia-setup-store-return-all-state.md)

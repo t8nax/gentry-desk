@@ -42,6 +42,7 @@ Create a brief component map before implementation for any non-trivial feature.
 - Move feature UI and feature logic out of entry/root/view components unless the task is intentionally a tiny single-file demo.
 - Define props/emits contracts for each child component in the map.
 - Prefer a feature folder layout (`components/<feature>/...`, `composables/use<Feature>.ts`) when adding more than one component.
+- **In this project:** modules live under `views/`, `layouts/`, or `components/` as one domain folder with domain-prefixed files — follow [frontend-modules](../frontend-modules/SKILL.md).
 
 ## 2) Apply essential Vue foundations (required)
 
@@ -101,6 +102,7 @@ Entry/root and route view rule:
 - Extract logic into composables when it is reused, stateful, or side-effect heavy.
 - Keep composable APIs small, typed, and predictable.
 - Separate feature logic from presentational components.
+- **In this project:** form field validation must use `useFormValidation` (`frontend/src/composables/useFormValidation.ts`) — see [frontend-modules → Валидация форм](../frontend-modules/SKILL.md#валидация-форм). Do not hand-roll per-form `error`/`failure` refs for input rules.
 
 ## 3) Consider optional features only when requirements call for them
 

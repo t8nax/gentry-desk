@@ -5,7 +5,7 @@ import type { IconName } from '@/components/AppIcon/helper'
 import { FOCUS_RING } from '@/components/AppButton/helper'
 import { useEventListener } from '@/composables/useEventListener'
 import { useWorktreesDialogs } from '@/views/worktrees/dialogs/helper'
-import { copyName, needsTaskSession, stubMessage, useWorktreesNotify, type WorkspaceRow } from '@/views/worktrees/helper'
+import { copyName, stubMessage, useWorktreesNotify, type WorkspaceRow } from '@/views/worktrees/helper'
 
 const props = defineProps<{
   row: WorkspaceRow
@@ -30,23 +30,8 @@ const host = useTemplateRef<HTMLDivElement>('host')
 
 const name = computed(() => copyName(props.row.path))
 
-// У основной копии удаления нет вовсе: кит её не удаляет и от неё заводит новые
 const items = computed<MenuItem[]>(() => {
   const list: MenuItem[] = [
-    {
-      id: 'session',
-      label: 'Завести сессию задачи',
-      icon: 'play',
-      disabled: !needsTaskSession(props.row),
-      run: () => notify(stubMessage(`Сессия задачи в ${name.value} заводится (мок)`)),
-    },
-    {
-      id: 'terminal',
-      label: 'Открыть в терминале',
-      icon: 'terminal',
-      disabled: !props.row.backgroundSession,
-      run: () => notify(stubMessage(`Терминал с сессией ${name.value} открыт (мок)`)),
-    },
     {
       id: 'vscode',
       label: 'Открыть в VS Code',
@@ -55,12 +40,12 @@ const items = computed<MenuItem[]>(() => {
       run: () => notify(stubMessage(`VS Code открыт на ${name.value} (мок)`)),
     },
   ]
-  if (!props.row.copiesDir) {
+  if (!props.row.main) {
     list.push({
       id: 'remove',
       label: 'Удалить копию',
       icon: 'trash',
-      disabled: props.row.status !== 'free',
+      disabled: props.row.occupancy !== 'free',
       danger: true,
       separated: true,
       run: () => openRemove(props.row),

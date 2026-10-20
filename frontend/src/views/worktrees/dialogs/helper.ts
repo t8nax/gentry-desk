@@ -1,15 +1,11 @@
 import { inject, provide, shallowRef, type InjectionKey } from 'vue'
 import type { WorkspaceRow } from '@/views/worktrees/helper'
 
-export type WorktreesDialog =
-  | { kind: 'create' }
-  | { kind: 'remove'; row: WorkspaceRow }
-  | { kind: 'reply'; row: WorkspaceRow }
+export type WorktreesDialog = { kind: 'connect' } | { kind: 'remove'; row: WorkspaceRow }
 
 export interface WorktreesDialogOpeners {
-  openCreate: () => void
+  openConnect: () => void
   openRemove: (row: WorkspaceRow) => void
-  openReply: (row: WorkspaceRow) => void
 }
 
 const worktreesDialogsKey: InjectionKey<WorktreesDialogOpeners> = Symbol('worktrees-dialogs')
@@ -19,9 +15,8 @@ export function provideWorktreesDialogs() {
   const dialog = shallowRef<WorktreesDialog | null>(null)
 
   const openers: WorktreesDialogOpeners = {
-    openCreate: () => (dialog.value = { kind: 'create' }),
+    openConnect: () => (dialog.value = { kind: 'connect' }),
     openRemove: (row) => (dialog.value = { kind: 'remove', row }),
-    openReply: (row) => (dialog.value = { kind: 'reply', row }),
   }
 
   function closeDialog() {
@@ -39,108 +34,53 @@ export function useWorktreesDialogs(): WorktreesDialogOpeners {
   return openers
 }
 
-/** Сколько «кит» делает моковое действие. */
+/** Сколько длится моковое действие. */
 export const MOCK_ACTION_MS = 700
 
-/** kit — дорога в «Настройки»; refused — слова кита, их панель не переписывает. */
-export type DialogFailure = { kind: 'kit' | 'refused' | 'other'; text: string }
+/** refused — отказ проверки пути; other — прочая ошибка. */
+export type DialogFailure = { kind: 'refused' | 'other'; text: string }
 
-/** Проект в окне новой копии: база, копия, от которой кит заводит новые, и свободные копии. */
-export interface NewWorkspaceProject {
-  base: string
+/** Проект в окне подключения копии. */
+export interface ConnectWorkspaceProject {
+  knowledge: string
   name: string
-  source: WorkspaceRow | null
-  free: WorkspaceRow[]
 }
 
-export function projectsOf(rows: WorkspaceRow[]): NewWorkspaceProject[] {
-  const projects = new Map<string, NewWorkspaceProject>()
+export function projectsOf(rows: WorkspaceRow[]): ConnectWorkspaceProject[] {
+  const projects = new Map<string, ConnectWorkspaceProject>()
   for (const row of rows) {
-    const project = projects.get(row.base) ?? { base: row.base, name: row.project, source: null, free: [] }
-    projects.set(row.base, project)
-    if (row.error) continue
-    if (row.copiesDir) project.source ??= row
-    if (row.status === 'free') project.free.push(row)
+    if (!projects.has(row.knowledge)) {
+      projects.set(row.knowledge, { knowledge: row.knowledge, name: row.project })
+    }
   }
   return [...projects.values()]
 }
 
-const COPY_NAME_FORMAT = /^[a-z0-9]+(-[a-z0-9]+)*$/
+/** Нормализация пути для сравнения на Windows и Unix. */
+export function normalizePath(path: string): string {
+  return path.trim().replace(/\//g, '\\').replace(/\\+$/, '')
+}
 
-/** Проверка имени копии так, как её сделал бы кит; null — имя годится. */
-export function copyNameProblem(name: string, taken: string[]): string | null {
-  if (!COPY_NAME_FORMAT.test(name)) return `Имя «${name}» не подходит: нужна строчная латиница и цифры через дефис.`
-  if (taken.includes(name)) return `Копия «${name}» уже есть у проекта.`
+/** Проверка пути копии; null — путь годится. */
+export function connectPathProblem(path: string, taken: string[]): string | null {
+  const normalized = normalizePath(path)
+  if (!normalized) return 'Укажите путь к каталогу рабочей копии'
+  if (taken.some((item) => normalizePath(item).toLowerCase() === normalized.toLowerCase())) {
+    return 'Эта копия уже есть в пуле проекта.'
+  }
   return null
 }
 
-/** Новая свободная копия от основной копии проекта. */
-export function createdRow(source: WorkspaceRow, name: string): WorkspaceRow {
-  const dir = source.copiesDir ?? source.path.replace(/[\\/][^\\/]+$/, '')
+/** Свободная копия, добавленная в пул по пути. */
+export function connectedRow(project: ConnectWorkspaceProject, path: string): WorkspaceRow {
   return {
-    project: source.project,
-    base: source.base,
-    path: `${dir}\\${name}`,
-    branch: name,
-    task: null,
-    flowStep: null,
-    progress: null,
-    status: 'free',
-    error: null,
-    sessionState: null,
-    problemsState: source.problemsState,
-    baseProblems: source.baseProblems,
-    problems: 0,
-    letters: source.letters,
+    project: project.name,
+    knowledge: project.knowledge,
+    path: normalizePath(path),
+    branch: null,
+    main: false,
+    exists: true,
+    occupancy: 'free',
+    tasks: [],
   }
-}
-
-export interface QuestionVariant {
-  choice: string
-  effect: string | null
-  recommended: boolean
-}
-
-export interface OperatorQuestion {
-  title: string
-  context: string | null
-  variants: QuestionVariant[]
-}
-
-export type ReplyTab = 'feed' | 'context' | 'artifacts'
-
-export const REPLY_TABS: { id: ReplyTab; label: string }[] = [
-  { id: 'feed', label: 'Переписка' },
-  { id: 'context', label: 'Контекст' },
-  { id: 'artifacts', label: 'Артефакты' },
-]
-
-/** Пока видно «Ответы отправлены агенту», отправку можно отменить. */
-export const UNDO_MS = 1500
-
-/** Записанные ответы уводят окно угасанием. */
-export const FADE_MS = 220
-
-export const EMPTY_ANSWER = 'Напишите свой ответ или выберите вариант'
-
-/** Вопросы агента к оператору — мок вместо памяти копии. */
-export function mockQuestions(row: WorkspaceRow): OperatorQuestion[] {
-  return [
-    {
-      title: 'Как подписать колонку номера задачи?',
-      context: `Задача «${row.task ?? 'без названия'}» дошла до этапа «${row.flowStep ?? '—'}». Колонка номера стоит перед заголовком задачи.`,
-      variants: [
-        { choice: '«№»', effect: 'Коротко, колонка ужимается по плашке номера', recommended: true },
-        { choice: '«Номер»', effect: 'Понятнее, но колонка шире', recommended: false },
-      ],
-    },
-    {
-      title: 'Что показывать у задачи не из бэклога?',
-      context: null,
-      variants: [
-        { choice: 'Прочерк', effect: 'Как у свободной копии', recommended: true },
-        { choice: 'Пустую ячейку', effect: null, recommended: false },
-      ],
-    },
-  ]
 }

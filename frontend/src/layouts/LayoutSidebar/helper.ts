@@ -14,7 +14,7 @@ export interface SidebarNavItem {
 export const SIDEBAR_GROUP_LABEL = 'Панель'
 
 export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
-  { id: 'worktrees', label: 'Рабочие копии', icon: 'table', routeName: 'worktrees', showsWaiting: true },
+  { id: 'worktrees', label: 'Рабочие копии', icon: 'table', routeName: 'worktrees' },
   { id: 'backlog', label: 'Бэклог', icon: 'list' },
   { id: 'flow', label: 'Флоу', icon: 'flow' },
   { id: 'performers', label: 'Исполнители', icon: 'performer' },

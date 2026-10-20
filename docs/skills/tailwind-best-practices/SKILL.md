@@ -12,6 +12,8 @@ metadata:
 
 Comprehensive patterns for building consistent, maintainable interfaces with Tailwind CSS v3.4+ and v4. Contains 29 rules covering responsive design, dark mode, component patterns, configuration, and v4 migration.
 
+**In this project:** Prefer Tailwind in modules under `views/`, `layouts/`, and `components/` — see [frontend-modules](../frontend-modules/SKILL.md). Custom SCSS only when utilities are not enough ([scss-best-practices](../scss-best-practices/SKILL.md) + [bem-conventions](../bem-conventions/SKILL.md)).
+
 ## Metadata
 
 - **Version:** 1.0.0

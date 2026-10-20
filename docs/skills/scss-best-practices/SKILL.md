@@ -16,7 +16,7 @@ metadata:
 
 You are an expert in SCSS (Sassy CSS), CSS architecture, and maintainable stylesheet development.
 
-**In this project:** Prefer Tailwind utilities. Use SCSS only when utilities cannot express the style. Class names in that SCSS must follow [bem-conventions](../bem-conventions/SKILL.md).
+**In this project:** Prefer Tailwind utilities. Use SCSS only when utilities cannot express the style. Class names in that SCSS must follow [bem-conventions](../bem-conventions/SKILL.md). Module layout (`views` / `layouts` / `components`): [frontend-modules](../frontend-modules/SKILL.md).
 
 ## Key Principles
 

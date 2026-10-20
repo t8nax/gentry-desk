@@ -27,11 +27,11 @@ function remove() {
   failure.value = null
   timer = window.setTimeout(() => {
     busy.value = false
-    if (props.row.copiesDir) {
-      failure.value = { kind: 'other', text: 'Это основная копия проекта: её не удаляют, от неё заводят новые.' }
+    if (props.row.main) {
+      failure.value = { kind: 'other', text: 'Это основная копия проекта: её не удаляют из пула.' }
       return
     }
-    if (props.row.status !== 'free') {
+    if (props.row.occupancy !== 'free') {
       failure.value = { kind: 'other', text: 'В копии идёт задача — сначала её нужно закрыть.' }
       return
     }
@@ -51,9 +51,6 @@ onUnmounted(() => window.clearTimeout(timer))
       aria-labelledby="delete-workspace-title"
     >
       <div class="flex items-center gap-3 px-5 pb-1 pt-[18px]">
-        <span class="inline-flex text-kit-error-text" aria-hidden="true">
-          <AppIcon name="trash" />
-        </span>
         <h3 id="delete-workspace-title" class="m-0 text-[15px] font-semibold">Удалить рабочую копию</h3>
         <AppButton variant="icon" class="ml-auto" aria-label="Закрыть" :disabled="busy" @click="emit('close')">
           <AppIcon name="close" />
