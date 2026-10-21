@@ -27,7 +27,7 @@ const toggleLabel = computed(() => `${props.collapsed ? 'Развернуть' :
         class="group cursor-pointer select-none border-b border-kit-strong px-3 py-2 text-left text-[13px] font-normal text-kit-primary hover:bg-kit-surface"
         @click="emit('toggle')"
       >
-        <div class="flex items-center gap-2.5">
+        <div class="sticky left-0 flex w-max max-w-[min(100vw-5rem,24rem)] items-center gap-2.5 bg-kit-base py-0.5 group-hover:bg-kit-surface">
           <button
             type="button"
             class="inline-flex cursor-pointer rounded border-none bg-transparent p-0.5 text-kit-secondary hover:bg-kit-surface-hover hover:text-kit-primary group-hover:text-kit-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kit-primary"

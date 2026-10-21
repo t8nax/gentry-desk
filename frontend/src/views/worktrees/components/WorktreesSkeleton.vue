@@ -45,52 +45,54 @@ function bar(width: number | string, height: number) {
 
 <template>
   <div class="worktrees-skeleton" role="status" aria-busy="true" aria-label="Загрузка рабочих копий">
-    <table class="w-full border-collapse" aria-hidden="true">
-      <WorktreesHead />
-      <tbody v-for="(group, groupIndex) in GROUPS" :key="groupIndex" class="pointer-events-none" :class="{ invisible: !shown }">
-        <tr>
-          <th :colspan="COLUMN_COUNT" class="border-b border-kit-strong px-3 py-2 text-left">
-            <div class="flex items-center gap-2.5">
-              <span class="worktrees-skeleton__bar" :style="bar(14, 14)" />
-              <span class="worktrees-skeleton__bar" :style="bar(group.width, 12)" />
-            </div>
-          </th>
-        </tr>
-        <tr v-for="(row, rowIndex) in group.rows" :key="rowIndex">
-          <td :class="TABLE_CELL">
-            <div class="flex items-center gap-[9px]">
-              <span class="worktrees-skeleton__bar" :style="bar(row.name, 11)" />
-            </div>
-            <div class="mt-0.5">
-              <span class="worktrees-skeleton__bar" :style="bar(row.branch, 8)" />
-            </div>
-          </td>
-          <td :class="[TABLE_CELL, 'w-[1%] pr-1']">
-            <span class="worktrees-skeleton__bar" :style="bar(46, 18)" />
-          </td>
-          <td :class="[TABLE_CELL, 'w-[32%]']">
-            <span class="worktrees-skeleton__bar" :style="bar(row.task, 11)" />
-          </td>
-          <td :class="TABLE_CELL">
-            <span class="worktrees-skeleton__bar" :style="bar(row.stage, 11)" />
-          </td>
-          <td :class="TABLE_CELL">
-            <div class="flex min-w-[140px] items-center gap-2">
-              <span class="worktrees-skeleton__bar flex-1" :style="{ height: '4px' }" />
-              <span class="worktrees-skeleton__bar" :style="bar(26, 9)" />
-            </div>
-          </td>
-          <td :class="TABLE_CELL">
-            <span class="worktrees-skeleton__bar" :style="bar(row.badge, 22)" />
-          </td>
-          <td :class="TABLE_CELL">
-            <div class="flex justify-end">
-              <span class="worktrees-skeleton__bar" :style="bar(24, 24)" />
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[52rem] border-collapse" aria-hidden="true">
+        <WorktreesHead />
+        <tbody v-for="(group, groupIndex) in GROUPS" :key="groupIndex" class="pointer-events-none" :class="{ invisible: !shown }">
+          <tr>
+            <th :colspan="COLUMN_COUNT" class="border-b border-kit-strong px-3 py-2 text-left">
+              <div class="flex items-center gap-2.5">
+                <span class="worktrees-skeleton__bar" :style="bar(14, 14)" />
+                <span class="worktrees-skeleton__bar" :style="bar(group.width, 12)" />
+              </div>
+            </th>
+          </tr>
+          <tr v-for="(row, rowIndex) in group.rows" :key="rowIndex">
+            <td :class="TABLE_CELL">
+              <div class="flex items-center gap-[9px]">
+                <span class="worktrees-skeleton__bar" :style="bar(row.name, 11)" />
+              </div>
+              <div class="mt-0.5">
+                <span class="worktrees-skeleton__bar" :style="bar(row.branch, 8)" />
+              </div>
+            </td>
+            <td :class="[TABLE_CELL, 'w-[1%] pr-1']">
+              <span class="worktrees-skeleton__bar" :style="bar(46, 18)" />
+            </td>
+            <td :class="[TABLE_CELL, 'w-[32%]']">
+              <span class="worktrees-skeleton__bar" :style="bar(row.task, 11)" />
+            </td>
+            <td :class="TABLE_CELL">
+              <span class="worktrees-skeleton__bar" :style="bar(row.stage, 11)" />
+            </td>
+            <td :class="TABLE_CELL">
+              <div class="flex min-w-[100px] items-center gap-2 sm:min-w-[140px]">
+                <span class="worktrees-skeleton__bar flex-1" :style="{ height: '4px' }" />
+                <span class="worktrees-skeleton__bar" :style="bar(26, 9)" />
+              </div>
+            </td>
+            <td :class="TABLE_CELL">
+              <span class="worktrees-skeleton__bar" :style="bar(row.badge, 22)" />
+            </td>
+            <td :class="TABLE_CELL">
+              <div class="flex justify-end">
+                <span class="worktrees-skeleton__bar" :style="bar(24, 24)" />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 

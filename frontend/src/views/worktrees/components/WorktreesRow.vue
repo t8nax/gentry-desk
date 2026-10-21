@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import {
   OCCUPANCY_LABELS,
   TABLE_CELL,
+  TABLE_STICKY_FIRST,
   copyName,
   type WorktreeOccupancy,
   type WorkspaceRow,
@@ -23,19 +24,26 @@ const OCCUPANCY_CLASSES: Record<WorktreeOccupancy, string> = {
 // Подключённая копия отмечена заливкой всех ячеек, пока висит уведомление
 const cell = computed(() => [TABLE_CELL, props.fresh && 'bg-kit-active-bg'])
 
+const stickyCell = computed(() => [
+  ...cell.value,
+  TABLE_STICKY_FIRST,
+  props.fresh ? 'bg-kit-active-bg' : 'bg-kit-base',
+  'group-hover/row:bg-kit-surface',
+])
+
 const name = computed(() => copyName(props.row.path))
 
 const occupancyClass = computed(() => OCCUPANCY_CLASSES[props.row.occupancy])
 </script>
 
 <template>
-  <tr class="hover:bg-kit-surface">
+  <tr class="group/row hover:bg-kit-surface">
     <td
       :title="row.path"
-      :class="[cell, 'whitespace-nowrap', fresh && 'shadow-[inset_2px_0_0_var(--kit-active-text)]']"
+      :class="[stickyCell, 'whitespace-nowrap', fresh && 'shadow-[inset_2px_0_0_var(--kit-active-text)]']"
     >
-      <div class="flex items-center gap-2">
-        <div :class="!row.exists && 'text-kit-secondary'">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="min-w-0" :class="!row.exists && 'text-kit-secondary'">
           <div class="font-medium">{{ name }}</div>
           <div v-if="row.branch" class="mt-0.5 font-mono text-xs text-kit-secondary">
             {{ row.branch }}

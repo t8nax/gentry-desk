@@ -66,10 +66,14 @@ export const TOAST_MS = 5000
 export const FRESH_MS = 8000
 
 export const TABLE_HEAD_CELL =
-  'whitespace-nowrap border-b border-kit-subtle px-4 py-2.5 text-left text-xs font-normal text-kit-secondary'
+  'whitespace-nowrap border-b border-kit-subtle px-3 py-2 text-left text-xs font-normal text-kit-secondary sm:px-4 sm:py-2.5'
 
 /** Ячейка строки без white-space: колонка задачи переносится, остальные — нет. */
-export const TABLE_CELL = 'border-b border-kit-subtle px-4 py-2.5 align-middle'
+export const TABLE_CELL = 'border-b border-kit-subtle px-3 py-2 align-middle sm:px-4 sm:py-2.5'
+
+/** Первая колонка остаётся на месте при горизонтальном скролле таблицы. */
+export const TABLE_STICKY_FIRST =
+  'sticky left-0 z-[1] bg-kit-base shadow-[1px_0_0_var(--kit-subtle)]'
 
 export const OCCUPANCY_LABELS: Record<WorktreeOccupancy, string> = {
   free: 'Свободна',

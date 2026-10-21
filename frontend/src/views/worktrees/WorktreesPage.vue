@@ -69,11 +69,11 @@ function onRemoved(row: WorkspaceRow) {
 </script>
 
 <template>
-  <div class="flex items-center justify-between gap-3 px-6 pb-3 pt-4">
-    <div class="flex items-center gap-2">
-      <h2 class="m-0 text-base font-medium">Рабочие копии</h2>
+  <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 pb-3 pt-4 sm:px-6">
+    <div class="flex min-w-0 items-center gap-2">
+      <h2 class="m-0 whitespace-nowrap text-base font-medium">Рабочие копии</h2>
       <AppButton
-        class="box-border h-8 w-8 justify-center !bg-kit-base !p-0"
+        class="box-border h-8 w-8 shrink-0 justify-center !bg-kit-base !p-0"
         aria-label="Обновить"
         title="Обновить"
         :disabled="loading && rows === null"
@@ -82,13 +82,20 @@ function onRemoved(row: WorkspaceRow) {
         <AppIcon name="refresh" />
       </AppButton>
     </div>
-    <AppButton class="h-8" variant="add" :disabled="!rows || loading || projects.length === 0" @click="openConnect">
+    <AppButton
+      class="h-8 shrink-0"
+      variant="add"
+      aria-label="Добавить"
+      title="Добавить"
+      :disabled="!rows || loading || projects.length === 0"
+      @click="openConnect"
+    >
       <AppIcon name="plus" />
-      Добавить
+      <span class="hidden sm:inline">Добавить</span>
     </AppButton>
   </div>
 
-  <div v-if="error && rows === null" class="px-6 py-8">
+  <div v-if="error && rows === null" class="px-3 py-8 sm:px-6">
     <p class="m-0 text-kit-error-text">{{ error.message }}</p>
     <p v-if="error.hint" class="m-0 mt-1 text-sm text-kit-secondary">{{ error.hint }}</p>
     <AppButton class="mt-4" @click="retry">Повторить</AppButton>
@@ -98,7 +105,7 @@ function onRemoved(row: WorkspaceRow) {
   <template v-else>
     <p
       v-if="error"
-      class="mx-6 mb-3 rounded border border-kit-error-border bg-kit-error-bg px-3 py-2 text-sm text-kit-error-text"
+      class="mx-3 mb-3 rounded border border-kit-error-border bg-kit-error-bg px-3 py-2 text-sm text-kit-error-text sm:mx-6"
     >
       {{ error.message }}
       <AppButton size="sm" class="ml-2" @click="retry">Обновить</AppButton>
@@ -106,7 +113,7 @@ function onRemoved(row: WorkspaceRow) {
     <div :class="{ 'animate-loaded-in motion-reduce:animate-none': revealing }" @animationend.self="endReveal">
       <WorktreesTable :fresh="fresh" />
     </div>
-    <p v-if="rows.length === 0" class="m-0 px-6 py-8 text-kit-secondary">
+    <p v-if="rows.length === 0" class="m-0 px-3 py-8 text-kit-secondary sm:px-6">
       Нет отслеживаемых проектов или рабочих копий. Проекты добавляются в разделе «Настройки».
     </p>
   </template>

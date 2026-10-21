@@ -17,15 +17,18 @@ const grouped = computed(() => groupByKnowledge(rows.value ?? []))
 </script>
 
 <template>
-  <table class="w-full border-collapse">
-    <WorktreesHead />
-    <WorktreesGroup
-      v-for="group in grouped"
-      :key="group.knowledge"
-      :group="group"
-      :collapsed="groups.isCollapsed(group.knowledge)"
-      :fresh="fresh"
-      @toggle="groups.toggle(group.knowledge)"
-    />
-  </table>
+  <!-- Горизонтальный скролл у таблицы: колонки не сжимаются и не наезжают друг на друга -->
+  <div class="overflow-x-auto">
+    <table class="w-full min-w-[52rem] border-collapse">
+      <WorktreesHead />
+      <WorktreesGroup
+        v-for="group in grouped"
+        :key="group.knowledge"
+        :group="group"
+        :collapsed="groups.isCollapsed(group.knowledge)"
+        :fresh="fresh"
+        @toggle="groups.toggle(group.knowledge)"
+      />
+    </table>
+  </div>
 </template>

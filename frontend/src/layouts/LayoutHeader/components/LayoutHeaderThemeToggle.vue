@@ -7,11 +7,13 @@ import { useTheme } from '@/composables/useTheme'
 const { theme, toggle } = useTheme()
 
 const isDark = computed(() => theme.value === 'dark')
+
+const label = computed(() => (isDark.value ? 'Светлая тема' : 'Тёмная тема'))
 </script>
 
 <template>
-  <AppButton @click="toggle">
+  <AppButton class="shrink-0" :aria-label="label" :title="label" @click="toggle">
     <AppIcon :name="isDark ? 'sun' : 'moon'" />
-    {{ isDark ? 'Светлая тема' : 'Тёмная тема' }}
+    <span class="hidden md:inline">{{ label }}</span>
   </AppButton>
 </template>

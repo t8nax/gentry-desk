@@ -7,8 +7,14 @@ import { AGENT_NAME } from '@/layouts/LayoutHeader/helper'
 </script>
 
 <template>
-  <AppButton type="button" disabled :title="`Раздел «Спросить ${AGENT_NAME}» ещё не перенесён`">
+  <AppButton
+    type="button"
+    disabled
+    class="shrink-0"
+    :aria-label="`Спросить ${AGENT_NAME}`"
+    :title="`Раздел «Спросить ${AGENT_NAME}» ещё не перенесён`"
+  >
     <AppIcon name="ask" />
-    Спросить {{ AGENT_NAME }}
+    <span class="hidden md:inline">Спросить {{ AGENT_NAME }}</span>
   </AppButton>
 </template>
