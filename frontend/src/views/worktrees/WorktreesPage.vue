@@ -49,7 +49,7 @@ async function onConnected(path: string, knowledge: string) {
   await refresh()
   notify({
     icon: 'check',
-    parts: [{ text: 'Копия ' }, { text: copyName(path), code: true }, { text: ' подключена' }],
+    parts: [{ text: 'Копия ' }, { text: copyName(path), code: true }, { text: ' добавлена' }],
   })
 }
 

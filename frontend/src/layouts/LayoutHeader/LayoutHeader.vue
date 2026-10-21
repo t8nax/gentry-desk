@@ -9,7 +9,7 @@ import { APP_TITLE } from '@/layouts/LayoutHeader/helper'
 <template>
   <header class="flex h-14 shrink-0 items-center gap-2 border-b border-kit-subtle px-3 sm:gap-3 sm:px-6">
     <AppIcon name="logo" class="shrink-0" />
-    <h3 class="m-0 mr-auto min-w-0 truncate whitespace-nowrap text-sm font-medium">{{ APP_TITLE }}</h3>
+    <h3 class="m-0 mr-auto min-w-0 truncate text-sm font-medium">{{ APP_TITLE }}</h3>
     <LayoutHeaderAgentBar />
     <LayoutHeaderAskButton />
     <LayoutHeaderThemeToggle />

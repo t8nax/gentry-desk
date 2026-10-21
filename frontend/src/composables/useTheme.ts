@@ -1,10 +1,10 @@
-import { onScopeDispose, shallowRef } from 'vue'
+import { shallowRef } from 'vue'
 
 export type Theme = 'light' | 'dark'
 
 const THEME_STORAGE_KEY = 'gentry-desk.theme'
 
-const SYSTEM_LIGHT_QUERY = '(prefers-color-scheme: light)'
+const DEFAULT_THEME: Theme = 'light'
 
 function chosenTheme(): Theme | null {
   try {
@@ -15,31 +15,18 @@ function chosenTheme(): Theme | null {
   }
 }
 
-function systemTheme(): Theme {
-  return window.matchMedia?.(SYSTEM_LIGHT_QUERY).matches ? 'light' : 'dark'
-}
-
 function applyTheme(theme: Theme) {
   document.documentElement.dataset.theme = theme
 }
 
-/** Ставит тему до монтирования приложения: без выбора оператора — системную. */
+/** Ставит тему до монтирования приложения: без выбора оператора — светлую. */
 export function applyInitialTheme() {
-  applyTheme(chosenTheme() ?? systemTheme())
+  applyTheme(chosenTheme() ?? DEFAULT_THEME)
 }
 
-/** Тема панели: выбор оператора живёт в localStorage, без него панель следует за системой. */
+/** Тема панели: выбор оператора живёт в localStorage, без него — светлая. */
 export function useTheme() {
-  const theme = shallowRef<Theme>(chosenTheme() ?? systemTheme())
-
-  const media = window.matchMedia?.(SYSTEM_LIGHT_QUERY)
-  const onSystemChange = () => {
-    if (chosenTheme()) return
-    theme.value = systemTheme()
-    applyTheme(theme.value)
-  }
-  media?.addEventListener('change', onSystemChange)
-  onScopeDispose(() => media?.removeEventListener('change', onSystemChange))
+  const theme = shallowRef<Theme>(chosenTheme() ?? DEFAULT_THEME)
 
   function toggle() {
     theme.value = theme.value === 'dark' ? 'light' : 'dark'

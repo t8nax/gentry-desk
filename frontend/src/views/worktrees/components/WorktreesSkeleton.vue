@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { COLUMN_COUNT, TABLE_CELL } from '@/views/worktrees/helper'
+import { COLUMN_COUNT, TABLE_CELL, TABLE_STICKY_FIRST } from '@/views/worktrees/helper'
 import WorktreesHead from '@/views/worktrees/components/WorktreesHead.vue'
 
 defineProps<{
@@ -51,14 +51,14 @@ function bar(width: number | string, height: number) {
         <tbody v-for="(group, groupIndex) in GROUPS" :key="groupIndex" class="pointer-events-none" :class="{ invisible: !shown }">
           <tr>
             <th :colspan="COLUMN_COUNT" class="border-b border-kit-strong px-3 py-2 text-left">
-              <div class="flex items-center gap-2.5">
+              <div class="sticky left-0 flex w-max max-w-[min(100vw-5rem,24rem)] items-center gap-2.5 bg-kit-base py-0.5">
                 <span class="worktrees-skeleton__bar" :style="bar(14, 14)" />
                 <span class="worktrees-skeleton__bar" :style="bar(group.width, 12)" />
               </div>
             </th>
           </tr>
           <tr v-for="(row, rowIndex) in group.rows" :key="rowIndex">
-            <td :class="TABLE_CELL">
+            <td :class="[TABLE_CELL, TABLE_STICKY_FIRST]">
               <div class="flex items-center gap-[9px]">
                 <span class="worktrees-skeleton__bar" :style="bar(row.name, 11)" />
               </div>

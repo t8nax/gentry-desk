@@ -38,14 +38,11 @@ export default {
     },
   },
   plugins: [
-    // Пока оператор не выбрал тему, панель идёт за системой; выбор приходит атрибутом data-theme
+    // По умолчанию светлая; тёмная — только при data-theme="dark"
     plugin(({ addBase }) => {
       addBase({
-        ':root': { ...kitVars(dark), colorScheme: 'dark' },
-        '@media (prefers-color-scheme: light)': {
-          ':root:not([data-theme="dark"])': { ...kitVars(light), colorScheme: 'light' },
-        },
-        ':root[data-theme="light"]': { ...kitVars(light), colorScheme: 'light' },
+        ':root': { ...kitVars(light), colorScheme: 'light' },
+        ':root[data-theme="dark"]': { ...kitVars(dark), colorScheme: 'dark' },
       })
     }),
   ],

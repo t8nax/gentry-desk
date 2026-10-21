@@ -91,7 +91,7 @@ async function connect() {
       const hint = e.hint ? ` ${e.hint}` : ''
       form.setFormError(`${e.message}${hint}`)
     } else {
-      form.setFormError(e instanceof Error ? e.message : 'Не удалось подключить копию.')
+      form.setFormError(e instanceof Error ? e.message : 'Не удалось добавить копию.')
     }
     field.value?.focus()
   } finally {

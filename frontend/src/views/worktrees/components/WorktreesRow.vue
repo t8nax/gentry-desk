@@ -4,6 +4,7 @@ import {
   OCCUPANCY_LABELS,
   TABLE_CELL,
   TABLE_STICKY_FIRST,
+  TABLE_STICKY_FIRST_FRESH,
   copyName,
   type WorktreeOccupancy,
   type WorkspaceRow,
@@ -25,9 +26,8 @@ const OCCUPANCY_CLASSES: Record<WorktreeOccupancy, string> = {
 const cell = computed(() => [TABLE_CELL, props.fresh && 'bg-kit-active-bg'])
 
 const stickyCell = computed(() => [
-  ...cell.value,
-  TABLE_STICKY_FIRST,
-  props.fresh ? 'bg-kit-active-bg' : 'bg-kit-base',
+  TABLE_CELL,
+  props.fresh ? TABLE_STICKY_FIRST_FRESH : TABLE_STICKY_FIRST,
   'group-hover/row:bg-kit-surface',
 ])
 
@@ -38,10 +38,7 @@ const occupancyClass = computed(() => OCCUPANCY_CLASSES[props.row.occupancy])
 
 <template>
   <tr class="group/row hover:bg-kit-surface">
-    <td
-      :title="row.path"
-      :class="[stickyCell, 'whitespace-nowrap', fresh && 'shadow-[inset_2px_0_0_var(--kit-active-text)]']"
-    >
+    <td :title="row.path" :class="[stickyCell, 'whitespace-nowrap']">
       <div class="flex flex-wrap items-center gap-2">
         <div class="min-w-0" :class="!row.exists && 'text-kit-secondary'">
           <div class="font-medium">{{ name }}</div>

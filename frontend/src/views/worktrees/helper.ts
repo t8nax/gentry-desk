@@ -75,6 +75,13 @@ export const TABLE_CELL = 'border-b border-kit-subtle px-3 py-2 align-middle sm:
 export const TABLE_STICKY_FIRST =
   'sticky left-0 z-[1] bg-kit-base shadow-[1px_0_0_var(--kit-subtle)]'
 
+/**
+ * Sticky-колонка на «свежей» строке: inset-маркер и правая граница в одном shadow,
+ * иначе два класса shadow-* перетирают друг друга через --tw-shadow.
+ */
+export const TABLE_STICKY_FIRST_FRESH =
+  'sticky left-0 z-[1] bg-kit-active-bg shadow-[inset_2px_0_0_var(--kit-active-text),1px_0_0_var(--kit-subtle)]'
+
 export const OCCUPANCY_LABELS: Record<WorktreeOccupancy, string> = {
   free: 'Свободна',
   busy: 'Занята',
