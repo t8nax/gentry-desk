@@ -1,4 +1,5 @@
-import { inject, onMounted, onUnmounted, provide, ref, shallowRef, watch, type InjectionKey } from 'vue'
+import { inject, provide, ref, shallowRef, watch, type InjectionKey } from 'vue'
+import type { WorktreesScreenRow } from '@/api/worktrees'
 import type { IconName } from '@/components/AppIcon/helper'
 
 /** Занятость копии: свободна или занята незавершённой задачей. Не путать с этапом задачи и сессией агента. */
@@ -11,13 +12,18 @@ export type WorktreeOccupancy = 'free' | 'busy'
 export interface WorktreeTaskView {
   /** Идентификатор Gentry, например GENTRYDESK-1. */
   id: string
-  title: string
-  /** Название этапа, например «Реализация». */
+  /** null, если подробности недоступны. */
+  title: string | null
+  /** Название этапа, «Сценарий пройден» или null. */
   stage: string | null
   /** Номер круга этапа; null — круг не показывают. */
   round: number | null
-  /** Процент прогресса 0–100; из ядра считается отдельно. */
+  /** Процент прогресса 0–100; null — неопределённый. */
   progress: number | null
+  /** Исходные поля прогресса для подсказки. */
+  progressDetail: { passed: number; totalMin: number; totalMax: number } | null
+  /** Закрепление есть, но задача не попала в снимок списка. */
+  detailsUnavailable: boolean
 }
 
 export interface WorkspaceRow {
@@ -49,9 +55,6 @@ export interface FreshCopy {
 export const COLUMN_COUNT = 7
 
 export const WORKTREES_COLUMNS = ['Копия', '№', 'Задача', 'Этап', 'Прогресс', 'Статус', 'Действия'] as const
-
-/** Сколько длится чтение моковых копий. */
-export const MOCK_LOAD_MS = 600
 
 /** Сколько раздел читает данные, прежде чем показать заготовку: быстрая загрузка обходится без неё. */
 export const SKELETON_DELAY_MS = 300
@@ -90,7 +93,15 @@ export function currentTask(row: WorkspaceRow): WorktreeTaskView | null {
 /** Подпись этапа с кругом: «Реализация, круг 2». */
 export function stageLabel(task: WorktreeTaskView): string | null {
   if (!task.stage) return null
+  if (task.stage === 'Сценарий пройден') return task.stage
   return task.round != null ? `${task.stage}, круг ${task.round}` : task.stage
+}
+
+/** Подсказка прогресса: passed и диапазон total_min–total_max. */
+export function progressTitle(task: WorktreeTaskView): string | undefined {
+  const d = task.progressDetail
+  if (!d) return undefined
+  return `${d.passed} из ${d.totalMin}–${d.totalMax}`
 }
 
 /** Группа — проект по пути знания; группы и копии в них идут в порядке строк. */
@@ -117,114 +128,45 @@ export function plural(count: number, one: string, few: string, many: string): s
   return `${count} ${many}`
 }
 
-const GENTRY_DESK_KNOWLEDGE = 'C:\\projects\\ai\\gentry-desk-knowledge'
-const SHOP_KNOWLEDGE = 'D:\\Projects\\shop-knowledge'
-
-/** Моки: свободная, занятая, основная, круг 2, отсутствующий каталог (свободная и занятая). */
-export const MOCK_WORKSPACE_ROWS: WorkspaceRow[] = [
-  {
-    project: 'gentry-desk',
-    knowledge: GENTRY_DESK_KNOWLEDGE,
-    path: 'C:\\projects\\ai\\gentry-desk',
-    branch: 'main',
-    main: true,
-    exists: true,
-    occupancy: 'busy',
-    tasks: [
-      {
-        id: 'GENTRYDESK-1',
-        title: 'Экран рабочих копий под ядро Gentry',
-        stage: 'Реализация',
-        round: 2,
-        progress: 42,
-      },
-    ],
-  },
-  {
-    project: 'gentry-desk',
-    knowledge: GENTRY_DESK_KNOWLEDGE,
-    path: 'C:\\projects\\ai\\gentry-desk-wt',
-    branch: 'feat/connect',
-    main: false,
-    exists: true,
-    occupancy: 'free',
-    tasks: [],
-  },
-  {
-    project: 'gentry-desk',
-    knowledge: GENTRY_DESK_KNOWLEDGE,
-    path: 'E:\\gone\\gentry-desk-old',
-    branch: null,
-    main: false,
-    exists: false,
-    occupancy: 'free',
-    tasks: [],
-  },
-  {
-    project: 'gentry-desk',
-    knowledge: GENTRY_DESK_KNOWLEDGE,
-    path: 'E:\\gone\\gentry-desk-feature',
-    branch: 'feat/missing',
-    main: false,
-    exists: false,
-    occupancy: 'busy',
-    tasks: [
-      {
-        id: 'GENTRYDESK-3',
-        title: 'Задача на копии без каталога',
-        stage: 'Реализация',
-        round: 1,
-        progress: 35,
-      },
-    ],
-  },
-  {
-    project: 'shop',
-    knowledge: SHOP_KNOWLEDGE,
-    path: 'D:\\Projects\\shop\\main',
-    branch: 'main',
-    main: true,
-    exists: true,
-    occupancy: 'busy',
-    tasks: [
-      {
-        id: 'SHOP-1',
-        title: 'Скидка в корзине',
-        stage: 'Реализация',
-        round: 2,
-        progress: 67,
-      },
-    ],
-  },
-  {
-    project: 'shop',
-    knowledge: SHOP_KNOWLEDGE,
-    path: 'D:\\Projects\\shop\\wt-1',
-    branch: 'feat/pay',
-    main: false,
-    exists: true,
-    occupancy: 'free',
-    tasks: [],
-  },
-  {
-    project: 'shop',
-    knowledge: SHOP_KNOWLEDGE,
-    path: 'D:\\Projects\\shop\\wt-2',
-    branch: 'feat/import',
-    main: false,
-    exists: true,
-    occupancy: 'busy',
-    tasks: [
-      {
-        id: 'SHOP-4',
-        title: 'Фильтр каталога по наличию',
-        stage: 'План',
-        round: 1,
-        progress: 20,
-      },
-    ],
-  },
-]
+export function mapScreenRow(row: WorktreesScreenRow): WorkspaceRow {
+  const tasks: WorktreeTaskView[] = []
+  if (row.task) {
+    const t = row.task
+    let stage: string | null = null
+    let round: number | null = null
+    if (t.details_unavailable) {
+      stage = null
+      round = null
+    } else if (t.finished && !t.stage) {
+      stage = 'Сценарий пройден'
+    } else if (t.stage) {
+      stage = t.stage.title
+      round = t.stage.round
+    }
+    tasks.push({
+      id: t.id,
+      title: t.details_unavailable ? null : t.title,
+      stage,
+      round,
+      progress: t.details_unavailable ? null : t.percent,
+      progressDetail:
+        t.progress && !t.details_unavailable
+          ? { passed: t.progress.passed, totalMin: t.progress.total_min, totalMax: t.progress.total_max }
+          : null,
+      detailsUnavailable: t.details_unavailable,
+    })
+  }
+  return {
+    project: row.project,
+    knowledge: row.knowledge,
+    path: row.path,
+    branch: row.branch,
+    main: row.main,
+    exists: row.exists,
+    occupancy: row.occupancy,
+    tasks,
+  }
+}
 
 const COLLAPSED_GROUPS_KEY = 'gentry-desk.worktrees.collapsed-groups'
 
@@ -312,38 +254,14 @@ export function useToast() {
   return { toast, notify }
 }
 
-/**
- * Моковое чтение копий: заготовка проявляется через SKELETON_DELAY_MS, строки приходят через MOCK_LOAD_MS
- * и встают коротким проявлением, только если заготовку успели показать.
- */
-export function useMockWorkspaceRows() {
-  const rows = ref<WorkspaceRow[] | null>(null)
-  const skeletonShown = shallowRef(false)
-  const revealing = shallowRef(false)
-  let skeletonTimer: number | undefined
-  let loadTimer: number | undefined
+export interface LoadError {
+  message: string
+  hint: string | null
+  code: string
+}
 
-  onMounted(() => {
-    skeletonTimer = window.setTimeout(() => (skeletonShown.value = true), SKELETON_DELAY_MS)
-    loadTimer = window.setTimeout(() => {
-      window.clearTimeout(skeletonTimer)
-      revealing.value = skeletonShown.value
-      skeletonShown.value = false
-      rows.value = MOCK_WORKSPACE_ROWS.map((row) => ({
-        ...row,
-        tasks: row.tasks.map((task) => ({ ...task })),
-      }))
-    }, MOCK_LOAD_MS)
-  })
-
-  onUnmounted(() => {
-    window.clearTimeout(skeletonTimer)
-    window.clearTimeout(loadTimer)
-  })
-
-  function endReveal() {
-    revealing.value = false
-  }
-
-  return { rows, skeletonShown, revealing, endReveal }
+/** Проект из ответа бэкенда: путь знания и отображаемое имя. */
+export interface WorkspaceProject {
+  knowledge: string
+  name: string
 }

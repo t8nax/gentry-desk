@@ -1,38 +1,38 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, shallowRef, useTemplateRef } from 'vue'
+import { storeToRefs } from 'pinia'
+import { ApiError, addWorktree } from '@/api/worktrees'
 import AppButton from '@/components/AppButton/AppButton.vue'
 import AppDialog from '@/components/AppDialog/AppDialog.vue'
 import AppIcon from '@/components/AppIcon/AppIcon.vue'
 import { useFormValidation } from '@/composables/useFormValidation'
-import type { WorkspaceRow } from '@/views/worktrees/helper'
 import {
-  MOCK_ACTION_MS,
+  agentsWarningText,
   connectPathProblem,
   normalizePath,
-  projectsOf,
   type ConnectWorkspaceProject,
 } from '@/views/worktrees/dialogs/helper'
-
-const props = defineProps<{
-  rows: WorkspaceRow[]
-}>()
+import { useWorktreesStore } from '@/views/worktrees/worktreesStore'
 
 const emit = defineEmits<{
   close: []
-  connected: [project: ConnectWorkspaceProject, path: string]
+  connected: [path: string, knowledge: string]
+  agentsWarning: [text: string]
 }>()
 
+const { rows, projects: storeProjects } = storeToRefs(useWorktreesStore())
+
 // Список проектов берётся на открытии: обновление таблицы не должно двигать выбор под рукой
-const projects = projectsOf(props.rows)
+const projects: ConnectWorkspaceProject[] = storeProjects.value.slice()
 
 const knowledge = shallowRef<string | null>(projects[0]?.knowledge ?? null)
 const busy = shallowRef(false)
 const field = useTemplateRef<HTMLInputElement>('field')
-let timer: number | undefined
+let abort: AbortController | null = null
 
 const project = computed(() => projects.find((item) => item.knowledge === knowledge.value) ?? null)
 const taken = computed(() =>
-  props.rows.filter((row) => row.knowledge === knowledge.value).map((row) => row.path),
+  (rows.value ?? []).filter((row) => row.knowledge === knowledge.value).map((row) => row.path),
 )
 
 const form = useFormValidation({
@@ -42,18 +42,20 @@ const form = useFormValidation({
   }),
 })
 
+const formErrorText = form.formError
 const submitLabel = computed(() =>
   busy.value
-    ? 'Подключается…'
-    : form.submitted.value && form.invalidOf('path')
+    ? 'Добавляется…'
+    : (form.submitted.value && form.invalidOf('path')) || formErrorText.value
       ? 'Попробовать снова'
-      : 'Подключить',
+      : 'Добавить',
 )
 const submitDisabled = computed(() => busy.value || !project.value)
 
 function chooseProject(projectKnowledge: string) {
   knowledge.value = projectKnowledge
   form.clearError('path')
+  form.setFormError(null)
 }
 
 function projectClass(enabled: boolean) {
@@ -67,22 +69,38 @@ function markClass(on: boolean) {
   return on ? 'border-kit-primary bg-kit-primary' : 'border-kit-strong'
 }
 
-function connect() {
+async function connect() {
   const selected = project.value
   if (!selected || busy.value) return
+  form.setFormError(null)
   if (!form.validate()) {
     field.value?.focus()
     return
   }
   busy.value = true
-  timer = window.setTimeout(() => {
+  abort?.abort()
+  abort = new AbortController()
+  try {
+    const result = await addWorktree(selected.name, normalizePath(form.values.path), abort.signal)
+    const warning = agentsWarningText(result.agents)
+    if (warning) emit('agentsWarning', warning)
+    emit('connected', result.path, selected.knowledge)
+  } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
+    if (e instanceof ApiError) {
+      const hint = e.hint ? ` ${e.hint}` : ''
+      form.setFormError(`${e.message}${hint}`)
+    } else {
+      form.setFormError(e instanceof Error ? e.message : 'Не удалось подключить копию.')
+    }
+    field.value?.focus()
+  } finally {
     busy.value = false
-    emit('connected', selected, normalizePath(form.values.path))
-  }, MOCK_ACTION_MS)
+  }
 }
 
 onMounted(() => field.value?.focus())
-onUnmounted(() => window.clearTimeout(timer))
+onUnmounted(() => abort?.abort())
 </script>
 
 <template>
@@ -96,7 +114,7 @@ onUnmounted(() => window.clearTimeout(timer))
       @submit.prevent="connect"
     >
       <div class="flex items-center gap-3 px-5 pb-1 pt-[18px]">
-        <h3 id="connect-workspace-title" class="m-0 text-[15px] font-semibold">Подключить рабочую копию</h3>
+        <h3 id="connect-workspace-title" class="m-0 text-[15px] font-semibold">Добавить рабочую копию</h3>
         <AppButton variant="icon" class="ml-auto" aria-label="Закрыть" :disabled="busy" @click="emit('close')">
           <AppIcon name="close" />
         </AppButton>
@@ -157,6 +175,9 @@ onUnmounted(() => window.clearTimeout(timer))
           class="mt-1.5 text-xs text-kit-error-text"
         >
           {{ form.errorOf('path') }}
+        </p>
+        <p v-else-if="formErrorText" class="mt-1.5 text-xs text-kit-error-text" role="alert">
+          {{ formErrorText }}
         </p>
       </div>
 

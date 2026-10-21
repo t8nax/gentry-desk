@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { groupByKnowledge, useCollapsedGroups, type FreshCopy, type WorkspaceRow } from '@/views/worktrees/helper'
+import { storeToRefs } from 'pinia'
+import { groupByKnowledge, useCollapsedGroups, type FreshCopy } from '@/views/worktrees/helper'
+import { useWorktreesStore } from '@/views/worktrees/worktreesStore'
 import WorktreesGroup from '@/views/worktrees/components/WorktreesGroup.vue'
 import WorktreesHead from '@/views/worktrees/components/WorktreesHead.vue'
 
-const props = defineProps<{
-  rows: WorkspaceRow[]
+defineProps<{
   fresh: FreshCopy | null
 }>()
 
+const { rows } = storeToRefs(useWorktreesStore())
 const groups = useCollapsedGroups()
 
-const grouped = computed(() => groupByKnowledge(props.rows))
+const grouped = computed(() => groupByKnowledge(rows.value ?? []))
 </script>
 
 <template>

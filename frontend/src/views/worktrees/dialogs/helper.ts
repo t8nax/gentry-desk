@@ -34,10 +34,10 @@ export function useWorktreesDialogs(): WorktreesDialogOpeners {
   return openers
 }
 
-/** Сколько длится моковое действие. */
+/** Сколько длится заглушка удаления (в ядре удаления копии пока нет). */
 export const MOCK_ACTION_MS = 700
 
-/** refused — отказ проверки пути; other — прочая ошибка. */
+/** Отказ заглушки удаления. */
 export type DialogFailure = { kind: 'refused' | 'other'; text: string }
 
 /** Проект в окне подключения копии. */
@@ -71,16 +71,17 @@ export function connectPathProblem(path: string, taken: string[]): string | null
   return null
 }
 
-/** Свободная копия, добавленная в пул по пути. */
-export function connectedRow(project: ConnectWorkspaceProject, path: string): WorkspaceRow {
-  return {
-    project: project.name,
-    knowledge: project.knowledge,
-    path: normalizePath(path),
-    branch: null,
-    main: false,
-    exists: true,
-    occupancy: 'free',
-    tasks: [],
+/** Краткое описание проблем раскладки субагентов после успешного подключения. */
+export function agentsWarningText(agents: {
+  conflicts: Array<{ agent: string }>
+  error?: string | null
+} | null | undefined): string | null {
+  if (!agents) return null
+  const parts: string[] = []
+  if (agents.error) parts.push(agents.error)
+  if (agents.conflicts.length > 0) {
+    const names = agents.conflicts.map((c) => c.agent).join(', ')
+    parts.push(`Конфликт субагентов: ${names}`)
   }
+  return parts.length > 0 ? parts.join('. ') : null
 }

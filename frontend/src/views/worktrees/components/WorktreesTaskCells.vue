@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { FOCUS_RING } from '@/components/AppButton/helper'
 import {
   currentTask,
+  progressTitle,
   stageLabel,
   stubMessage,
   useWorktreesNotify,
@@ -24,6 +25,7 @@ const notify = useWorktreesNotify()
  */
 const task = computed(() => currentTask(props.row))
 const stage = computed(() => (task.value ? stageLabel(task.value) : null))
+const progressHint = computed(() => (task.value ? progressTitle(task.value) : undefined))
 
 function openTask(id: string) {
   notify(stubMessage(`Карточка задачи ${id} ещё не перенесена`))
@@ -44,8 +46,13 @@ function openTask(id: string) {
     </button>
   </td>
   <td :class="[cellClass, 'w-[32%] whitespace-normal', !task && 'text-kit-tertiary']">
+    <template v-if="task?.detailsUnavailable">
+      <span class="text-kit-secondary" title="Сведения задачи недоступны в текущем снимке списка. Нажмите «Обновить».">
+        Подробности недоступны
+      </span>
+    </template>
     <button
-      v-if="task"
+      v-else-if="task?.title"
       type="button"
       class="cursor-pointer border-0 bg-transparent p-0 text-left text-kit-primary hover:underline"
       :class="FOCUS_RING"
@@ -59,6 +66,6 @@ function openTask(id: string) {
     {{ stage ?? '' }}
   </td>
   <td :class="[cellClass, 'whitespace-nowrap', (task?.progress == null) && 'text-kit-tertiary']">
-    <WorktreesProgress v-if="task?.progress != null" :value="task.progress" />
+    <WorktreesProgress v-if="task?.progress != null" :value="task.progress" :title="progressHint" />
   </td>
 </template>
