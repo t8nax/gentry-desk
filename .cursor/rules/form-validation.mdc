@@ -1,0 +1,17 @@
+---
+description: Form field validation must use useFormValidation — no hand-rolled error refs
+globs: frontend/**/*Dialog*.vue,frontend/**/dialogs/**/*.vue,frontend/**/dialogs/**/*.ts,frontend/src/composables/useFormValidation.ts
+alwaysApply: false
+---
+
+# Form validation
+
+For forms with input fields, use `useFormValidation` from `frontend/src/composables/useFormValidation.ts`.
+
+- Domain rules stay as pure `string | null` helpers in module `helper.ts` / `dialogs/helper.ts`
+- Wire them through `rules` / `validate()` / `fieldAttrs` / `errorAttrs`
+- Show field errors as red text under the input (`text-kit-error-text`), not as a banner
+- Reference: `frontend/src/views/worktrees/dialogs/ConnectWorkspaceDialog.vue`
+- Full rule: `docs/skills/frontend-modules/SKILL.md` → «Валидация форм»
+
+Do **not** invent a local `failure`/`error` shallowRef for field validation, and do not add zod/vee-validate/etc. unless the operator asks.
