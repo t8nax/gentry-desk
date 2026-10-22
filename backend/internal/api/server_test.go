@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/t8nax/gentry-desk/backend/internal/cli"
+	"github.com/t8nax/gentry-desk/backend/internal/folderpick"
 	"github.com/t8nax/gentry-desk/backend/internal/worktrees"
 )
 
@@ -30,6 +31,15 @@ func (s *stubWorktrees) Load(context.Context) (*worktrees.Screen, error) {
 func (s *stubWorktrees) Add(_ context.Context, req worktrees.AddRequest) (*worktrees.AddResult, error) {
 	s.lastAdd = req
 	return s.add, s.addErr
+}
+
+type stubFolders struct {
+	result folderpick.Result
+	err    error
+}
+
+func (s *stubFolders) Pick(context.Context) (folderpick.Result, error) {
+	return s.result, s.err
 }
 
 func TestHealthOK(t *testing.T) {
@@ -230,6 +240,112 @@ func TestAddBodyTooLarge(t *testing.T) {
 		t.Fatalf("status=%d want 400 body=%s", rec.Code, rec.Body.String())
 	}
 	assertErrorCode(t, rec, "input_invalid")
+}
+
+func TestPickFolderOK(t *testing.T) {
+	t.Parallel()
+	path := `C:\shop\wt`
+	srv := &Server{
+		Worktrees: &stubWorktrees{},
+		Folders:   &stubFolders{result: folderpick.Result{Path: path}},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var got pickFolderResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Path == nil || *got.Path != path {
+		t.Fatalf("got=%+v", got)
+	}
+}
+
+func TestPickFolderCancelled(t *testing.T) {
+	t.Parallel()
+	srv := &Server{
+		Worktrees: &stubWorktrees{},
+		Folders:   &stubFolders{result: folderpick.Result{Cancelled: true}},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var got pickFolderResponse
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got.Path != nil {
+		t.Fatalf("path=%v want null", got.Path)
+	}
+}
+
+func TestPickFolderBusy(t *testing.T) {
+	t.Parallel()
+	srv := &Server{
+		Worktrees: &stubWorktrees{},
+		Folders:   &stubFolders{err: folderpick.ErrBusy},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status=%d want 409 body=%s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec, folderpick.CodeBusy)
+}
+
+func TestPickFolderCanceled(t *testing.T) {
+	t.Parallel()
+	srv := &Server{
+		Worktrees: &stubWorktrees{},
+		Folders:   &stubFolders{err: context.Canceled},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusGatewayTimeout {
+		t.Fatalf("status=%d want 504 body=%s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec, "folder_pick_canceled")
+}
+
+func TestPickFolderFailed(t *testing.T) {
+	t.Parallel()
+	srv := &Server{
+		Worktrees: &stubWorktrees{},
+		Folders:   &stubFolders{err: errors.New("os error")},
+	}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d want 500 body=%s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec, "folder_pick_failed")
+}
+
+func TestPickFolderNotConfigured(t *testing.T) {
+	t.Parallel()
+	srv := &Server{Worktrees: &stubWorktrees{}}
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/pick-folder", nil)
+	req.Header.Set("Origin", "http://127.0.0.1:5173")
+	srv.Handler().ServeHTTP(rec, req)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d want 500 body=%s", rec.Code, rec.Body.String())
+	}
+	assertErrorCode(t, rec, "internal")
 }
 
 func assertErrorCode(t *testing.T, rec *httptest.ResponseRecorder, want string) {

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/t8nax/gentry-desk/backend/internal/cli"
+	"github.com/t8nax/gentry-desk/backend/internal/folderpick"
 	"github.com/t8nax/gentry-desk/backend/internal/worktrees"
 )
 
@@ -22,9 +23,15 @@ type WorktreeService interface {
 	Add(ctx context.Context, req worktrees.AddRequest) (*worktrees.AddResult, error)
 }
 
+// FolderPicker opens a native directory dialog on the host.
+type FolderPicker interface {
+	Pick(ctx context.Context) (folderpick.Result, error)
+}
+
 // Server serves the desk API on loopback.
 type Server struct {
 	Worktrees WorktreeService
+	Folders   FolderPicker
 	CLI       *cli.Runner
 	// Addr is the listen address; default 127.0.0.1:8787.
 	Addr string
@@ -59,6 +66,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/health", s.handleHealth)
 	mux.HandleFunc("GET /api/worktrees", s.handleList)
 	mux.HandleFunc("POST /api/worktrees", s.handleAdd)
+	mux.HandleFunc("POST /api/pick-folder", s.handlePickFolder)
 	return s.withMiddleware(mux)
 }
 
@@ -177,6 +185,49 @@ func (s *Server) handleAdd(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, result)
+}
+
+type pickFolderResponse struct {
+	Path *string `json:"path"`
+}
+
+func (s *Server) handlePickFolder(w http.ResponseWriter, r *http.Request) {
+	if s.Folders == nil {
+		writeError(w, http.StatusInternalServerError, &cli.Error{
+			Code:    "internal",
+			Message: "Выбор каталога не настроен.",
+		})
+		return
+	}
+	result, err := s.Folders.Pick(r.Context())
+	if err != nil {
+		var fe *folderpick.Error
+		if errors.As(err, &fe) && fe.Code == folderpick.CodeBusy {
+			writeError(w, http.StatusConflict, &cli.Error{
+				Code:    fe.Code,
+				Message: "Окно выбора каталога уже открыто.",
+			})
+			return
+		}
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			writeError(w, http.StatusGatewayTimeout, &cli.Error{
+				Code:    "folder_pick_canceled",
+				Message: "Запрос отменён.",
+			})
+			return
+		}
+		writeError(w, http.StatusInternalServerError, &cli.Error{
+			Code:    "folder_pick_failed",
+			Message: "Не удалось открыть окно выбора каталога.",
+		})
+		return
+	}
+	if result.Cancelled {
+		writeJSON(w, http.StatusOK, pickFolderResponse{Path: nil})
+		return
+	}
+	path := result.Path
+	writeJSON(w, http.StatusOK, pickFolderResponse{Path: &path})
 }
 
 func writeCLIError(w http.ResponseWriter, err error) {

@@ -109,3 +109,14 @@ export async function addWorktree(project: string, path: string, signal?: AbortS
   if (!res.ok) throw await readError(res)
   return (await res.json()) as WorktreeAddResult
 }
+
+/** Opens a native directory dialog via the local backend; null if cancelled. */
+export async function pickFolder(signal?: AbortSignal): Promise<string | null> {
+  const res = await fetch(`${API_BASE}/api/pick-folder`, {
+    method: 'POST',
+    signal,
+  })
+  if (!res.ok) throw await readError(res)
+  const data = (await res.json()) as { path: string | null }
+  return data.path
+}

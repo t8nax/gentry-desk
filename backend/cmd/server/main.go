@@ -10,6 +10,7 @@ import (
 
 	"github.com/t8nax/gentry-desk/backend/internal/api"
 	"github.com/t8nax/gentry-desk/backend/internal/cli"
+	"github.com/t8nax/gentry-desk/backend/internal/folderpick"
 	"github.com/t8nax/gentry-desk/backend/internal/worktrees"
 )
 
@@ -22,6 +23,7 @@ func main() {
 	svc := &worktrees.Service{CLI: runner}
 	srv := &api.Server{
 		Worktrees: svc,
+		Folders:   &folderpick.Picker{},
 		CLI:       runner,
 		Addr:      *addr,
 	}
